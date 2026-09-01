@@ -7,6 +7,7 @@ import {
   type proto,
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
+import fs from 'fs'
 import pino from 'pino'
 import qrcodeTerminal from 'qrcode-terminal'
 import { env } from '../../config/env'
@@ -72,8 +73,16 @@ export class BaileysAdapter implements IWhatsAppAdapter {
           setTimeout(() => this.connect(), 5000)
         } else {
           this.logger.error(
-            'Sessão encerrada (logout). Remova o diretório de sessão e reinicie.',
+            'Sessão invalidada (HTTP 401). Limpando credenciais expiradas e aguardando novo QR Code em 5 segundos...',
           )
+          try {
+            if (fs.existsSync(env.WA_SESSION_DIR)) {
+              fs.rmSync(env.WA_SESSION_DIR, { recursive: true, force: true })
+            }
+          } catch (err) {
+            this.logger.error({ err }, 'Erro ao limpar diretório de sessão expirada')
+          }
+          setTimeout(() => this.connect(), 5000)
         }
       }
 
