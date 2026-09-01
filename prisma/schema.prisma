@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ----------------------------------------------------------------
+// Family — representa uma família/responsável cadastrada
+// ----------------------------------------------------------------
+model Family {
+  id             String   @id @default(uuid())
+  name           String
+  whatsapp_phone String   @unique
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  children      Child[]
+  messages      Message[]
+  school_events SchoolEvent[]
+
+  @@map("families")
+}
+
+// ----------------------------------------------------------------
+// Child — filhos vinculados à família
+// ----------------------------------------------------------------
+model Child {
+  id         String   @id @default(uuid())
+  family_id  String
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  family        Family        @relation(fields: [family_id], references: [id], onDelete: Cascade)
+  messages      Message[]
+  school_events SchoolEvent[]
+
+  @@map("children")
+}
+
+// ----------------------------------------------------------------
+// School — escolas (sem vínculo direto nesta etapa)
+// ----------------------------------------------------------------
+model School {
+  id         String   @id @default(uuid())
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("schools")
+}
+
+// ----------------------------------------------------------------
+// Message — mensagens recebidas pelo School Assist
+// whatsapp_message_id é único para garantir idempotência
+// ----------------------------------------------------------------
+model Message {
+  id                  String   @id @default(uuid())
+  family_id           String
+  child_id            String?
+  whatsapp_message_id String   @unique
+  sender_phone        String
+  content             String
+  received_at         DateTime
+  raw_payload         Json?
+  created_at          DateTime @default(now())
+
+  family        Family        @relation(fields: [family_id], references: [id], onDelete: Restrict)
+  child         Child?        @relation(fields: [child_id], references: [id], onDelete: SetNull)
+  school_events SchoolEvent[]
+
+  @@index([family_id])
+  @@index([sender_phone])
+  @@index([received_at])
+  @@map("messages")
+}
+
+// ----------------------------------------------------------------
+// SchoolEvent — eventos escolares (extraídos futuramente por IA)
+// Estrutura criada agora para não exigir migrations disruptivas depois
+// ----------------------------------------------------------------
+model SchoolEvent {
+  id              String    @id @default(uuid())
+  family_id       String
+  child_id        String?
+  message_id      String?
+  type            String
+  subject         String?
+  title           String
+  description     String?
+  start_date      DateTime?
+  due_date        DateTime?
+  action_required Boolean   @default(false)
+  target_scope    String?   // 'child' | 'class' | 'grade' | 'family' | 'school'
+  target_grade    String?   // Ex: "3º Ano"
+  url             String?   // Link preservado da mensagem (ex: formulários, pesquisas)
+  status          String    @default("pending")
+  confidence      Float?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  family    Family    @relation(fields: [family_id], references: [id], onDelete: Restrict)
+  child     Child?    @relation(fields: [child_id], references: [id], onDelete: SetNull)
+  message   Message?  @relation(fields: [message_id], references: [id], onDelete: SetNull)
+  reminders Reminder[]
+
+  @@index([family_id])
+  @@index([due_date])
+  @@index([status])
+  @@map("school_events")
+}
+
+// ----------------------------------------------------------------
+// Reminder — lembretes futuros vinculados a eventos
+// ----------------------------------------------------------------
+model Reminder {
+  id           String   @id @default(uuid())
+  event_id     String
+  scheduled_at DateTime
+  status       String   @default("pending")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  event SchoolEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@index([scheduled_at])
+  @@index([status])
+  @@map("reminders")
+}
