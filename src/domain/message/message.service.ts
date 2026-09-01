@@ -146,11 +146,15 @@ function formatWhatsAppEventResponse(
 ): string {
   if (!result.relevant || result.events.length === 0) {
     return [
-      `🎓 *School Assist — Leitura Concluída (${familyName})*`,
+      `🎓 *School Assist — Leitura Concluída*`,
       '',
-      `Olá, *${familyName}*! ℹ️ Esta mensagem é um relato de atividade ou comunicado informativo e *não exige nenhuma ação ou prazo* por parte da sua família.`,
+      `Olá, *${familyName}*! 👋`,
       '',
-      `*Guardamos o comunicado no seu histórico para consulta quando precisar.* 💙`,
+      `Analisei o conteúdo enviado e identifiquei que se trata de um **comunicado informativo ou relato de atividade** que *não exige nenhuma ação, tarefa ou prazo futuro* por parte da sua família.`,
+      '',
+      `✨ *Fique tranquilo(a)!* Guardamos esta mensagem no histórico da sua família para consulta sempre que precisar.`,
+      '',
+      `💡 *Dica:* Pode continuar me enviando qualquer comunicado, foto de bilhete, aviso ou arquivo PDF da escola que cuidarei da sua agenda! 💙`,
     ].join('\n')
   }
 
