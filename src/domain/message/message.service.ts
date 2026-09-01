@@ -115,6 +115,16 @@ export class MessageService {
           'Interpretação por IA finalizada',
         )
 
+        // Se a mensagem for irrelevante (sem ações/prazos), remove da base de dados
+        if (!interpretation.result.relevant || interpretation.persistedEventsCount === 0) {
+          try {
+            await this.messageRepo.delete(savedMessage.id)
+            logger.info({ messageId: savedMessage.id }, 'Mensagem sem relevância descartada do banco de dados')
+          } catch (delError) {
+            logger.warn({ messageId: savedMessage.id, delError }, 'Erro ao descarte de mensagem irrelevante')
+          }
+        }
+
         // 6. Enviar a resposta estruturada e amigável de volta pelo WhatsApp
         const formattedResponse = formatWhatsAppEventResponse(
           interpretation.result,
@@ -138,7 +148,7 @@ export class MessageService {
 
 /**
  * Formata os eventos escolares identificados pela IA em uma mensagem
- * extremamente pessoal, amigável e bem estruturada para o responsável.
+ * extremamente objetiva e amigável para o responsável.
  */
 function formatWhatsAppEventResponse(
   result: { relevant: boolean; events: Array<{ type: string; title: string; description?: string | null; subject?: string | null; start_date?: string | null; due_date?: string | null; action_required: boolean; target_scope?: string | null; target_grade?: string | null; url?: string | null }> },
@@ -146,15 +156,8 @@ function formatWhatsAppEventResponse(
 ): string {
   if (!result.relevant || result.events.length === 0) {
     return [
-      `🎓 *School Assist — Leitura Concluída*`,
-      '',
       `Olá, *${familyName}*! 👋`,
-      '',
-      `Analisei o conteúdo enviado e identifiquei que se trata de um **comunicado informativo ou relato de atividade** que *não exige nenhuma ação, tarefa ou prazo futuro* por parte da sua família.`,
-      '',
-      `✨ *Fique tranquilo(a)!* Guardamos esta mensagem no histórico da sua família para consulta sempre que precisar.`,
-      '',
-      `💡 *Dica:* Pode continuar me enviando qualquer comunicado, foto de bilhete, aviso ou arquivo PDF da escola que cuidarei da sua agenda! 💙`,
+      `Analisei o conteúdo enviado e identifiquei que se trata de um comunicado informativo ou relato de atividade que não exige nenhuma ação, tarefa ou prazo futuro por parte da sua família.`,
     ].join('\n')
   }
 

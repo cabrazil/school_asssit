@@ -44,4 +44,8 @@ export class MessageRepository {
   async findById(id: string): Promise<Message | null> {
     return prisma.message.findUnique({ where: { id } })
   }
+
+  async delete(id: string): Promise<void> {
+    await prisma.message.delete({ where: { id } })
+  }
 }
