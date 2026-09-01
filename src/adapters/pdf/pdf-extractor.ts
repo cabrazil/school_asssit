@@ -54,9 +54,8 @@ interface PageData {
 
 /**
  * Renderizador de página inteligente com extração por blocos verticais de colunas.
- * Identifica as colunas da tabela por datas no cabeçalho e agrupa TODO o conteúdo
- * de cada coluna de cima a baixo antes de passar para a próxima coluna,
- * garantindo zero mistura de matérias ou páginas entre colunas vizinhas.
+ * Varre toda a página para localizar os eixos X de TODAS as datas do cabeçalho
+ * e agrupa TODO o conteúdo de cada coluna de cima a baixo antes de passar para a próxima.
  */
 async function customTablePageRenderer(pageData: PageData): Promise<string> {
   const textContent = await pageData.getTextContent({
@@ -70,11 +69,13 @@ async function customTablePageRenderer(pageData: PageData): Promise<string> {
   // 1. Agrupar itens em linhas pelo eixo Y (tolerância de até 6 unidades)
   const linesMap = new Map<number, Array<{ x: number; str: string }>>()
   const lineYList: number[] = []
+  const allDateItems: Array<{ x: number; str: string }> = []
 
   for (const item of items) {
     if (!item.str || !item.str.trim()) continue
     const x = Math.round(item.transform[4])
     const y = Math.round(item.transform[5])
+    const str = item.str.trim()
 
     let targetY = lineYList.find((existingY) => Math.abs(existingY - y) <= 6)
     if (targetY === undefined) {
@@ -85,23 +86,27 @@ async function customTablePageRenderer(pageData: PageData): Promise<string> {
     if (!linesMap.has(targetY)) {
       linesMap.set(targetY, [])
     }
-    linesMap.get(targetY)!.push({ x, str: item.str.trim() })
+    linesMap.get(targetY)!.push({ x, str })
+
+    if (/\b\d{1,2}\/\d{1,2}\b/.test(str)) {
+      allDateItems.push({ x, str })
+    }
   }
 
   lineYList.sort((a, b) => b - a)
 
-  // 2. Localizar os eixos centrais X das colunas a partir das datas no cabeçalho (ex: 31/08, 01/09, 02/09...)
-  let columnCenters: number[] = []
-  for (const y of lineYList) {
-    const lineItems = linesMap.get(y)!
-    const dateItems = lineItems.filter((i) => /\b\d{1,2}\/\d{1,2}\b/.test(i.str))
-    if (dateItems.length >= 2) {
-      columnCenters = dateItems.map((i) => i.x).sort((a, b) => a - b)
-      break
+  // 2. Coletar os eixos centrais X de TODAS as datas encontradas na página (agrupando por proximidade X)
+  const rawDateX = allDateItems.map((d) => d.x).sort((a, b) => a - b)
+  const columnCenters: number[] = []
+  for (const x of rawDateX) {
+    const existing = columnCenters.find((cx) => Math.abs(cx - x) <= 30)
+    if (existing === undefined) {
+      columnCenters.push(x)
     }
   }
+  columnCenters.sort((a, b) => a - b)
 
-  // 3. Se identificou colunas de datas, agrupa o conteúdo por blocos verticais de coluna
+  // 3. Se identificou 2 ou mais colunas de datas, agrupa o conteúdo por blocos verticais de coluna
   if (columnCenters.length >= 2) {
     const columnBlocks: string[][] = Array.from({ length: columnCenters.length }, () => [])
 
