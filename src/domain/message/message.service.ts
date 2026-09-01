@@ -6,8 +6,6 @@ import { FamilyService } from '../family/family.service'
 import { MessageRepository } from '../../infrastructure/database/repositories/message.repository'
 import type { SchoolMessageInterpreter } from '../interpreter/school-message-interpreter.service'
 
-const CONFIRMATION_MESSAGE = '✅ Mensagem recebida pelo School Assist.'
-
 const logger = pino({ level: env.LOG_LEVEL, name: 'message-service' })
 
 export class MessageService {
@@ -25,7 +23,7 @@ export class MessageService {
    *  1. Verificar idempotência (mensagem já processada?)
    *  2. Localizar família pelo telefone
    *  3. Persistir mensagem no banco
-   *  4. Enviar confirmação pelo WhatsApp
+   *  4. Enviar confirmação personalizada pelo WhatsApp
    *  5. Interpretar conteúdo via IA e gerar SchoolEvents
    *  6. Registrar log de diagnóstico
    */
@@ -77,16 +75,17 @@ export class MessageService {
     const replyTarget = message.senderJid ?? senderPhone
     const isPdf = message.content.includes('[CONTEÚDO DO DOCUMENTO PDF]:')
 
+    // Personaliza a mensagem com o nome do responsável (ex: Vanessa, Claudia, Ana, Fabio)
     const confirmationText = isPdf
-      ? '📄 *Arquivo PDF recebido pelo School Assist.*\n⏳ *Estou lendo o documento e organizando o calendário de eventos para a sua família... Aguarde alguns instantes!*'
-      : CONFIRMATION_MESSAGE
+      ? `📄 *Arquivo PDF recebido, ${family.name}!*\n⏳ *Estou lendo o documento e organizando o calendário de eventos da sua família... Aguarde alguns instantes!*`
+      : `✅ *Mensagem recebida, ${family.name}!*`
 
     // 4. Confirmar recebimento pelo WhatsApp
     try {
       await this.whatsapp.sendMessage(replyTarget, confirmationText)
       logger.info(
         { messageId: savedMessage.id, target: maskPhone(replyTarget) },
-        'Confirmação enviada',
+        'Confirmação personalizada enviada',
       )
     } catch (error) {
       logger.error(
@@ -139,7 +138,7 @@ export class MessageService {
 
 /**
  * Formata os eventos escolares identificados pela IA em uma mensagem
- * amigável, clara e bem estruturada para o WhatsApp da família.
+ * extremamente pessoal, amigável e bem estruturada para o responsável.
  */
 function formatWhatsAppEventResponse(
   result: { relevant: boolean; events: Array<{ type: string; title: string; description?: string | null; subject?: string | null; start_date?: string | null; due_date?: string | null; action_required: boolean; target_scope?: string | null; target_grade?: string | null; url?: string | null }> },
@@ -147,16 +146,16 @@ function formatWhatsAppEventResponse(
 ): string {
   if (!result.relevant || result.events.length === 0) {
     return [
-      '🎓 *School Assist — Leitura Concluída*',
+      `🎓 *School Assist — Leitura Concluída (${familyName})*`,
       '',
-      'ℹ️ Esta mensagem é um relato de atividade ou comunicado informativo e *não exige nenhuma ação ou prazo* por parte da sua família.',
+      `Olá, *${familyName}*! ℹ️ Esta mensagem é um relato de atividade ou comunicado informativo e *não exige nenhuma ação ou prazo* por parte da sua família.`,
       '',
-      `*Guardamos a mensagem no histórico da família ${familyName} para consulta.* 💙`,
+      `*Guardamos o comunicado no seu histórico para consulta quando precisar.* 💙`,
     ].join('\n')
   }
 
   const count = result.events.length
-  const header = `🎓 *School Assist — ${count} Compromisso${count > 1 ? 's' : ''} Registrado${count > 1 ? 's' : ''}*\n`
+  const header = `🎓 *School Assist — ${count} Compromisso${count > 1 ? 's' : ''} Registrado${count > 1 ? 's' : ''} para ${familyName}*\n`
 
   const eventsFormatted = result.events
     .map((ev, idx) => {
@@ -188,7 +187,7 @@ function formatWhatsAppEventResponse(
     })
     .join('\n\n')
 
-  const footer = `\n\n---\n💡 *Estes compromissos foram salvos na agenda da família ${familyName}.*`
+  const footer = `\n\n---\n💡 *${familyName}, estes compromissos foram salvos na agenda da sua família.* 💙`
 
   return header + '\n' + eventsFormatted + footer
 }
