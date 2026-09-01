@@ -7,8 +7,8 @@ const logger = pino({ level: env.LOG_LEVEL, name: 'pdf-extractor' })
 /**
  * Extrai todo o conteúdo textual de um arquivo PDF fornecido como Buffer.
  *
- * Utiliza alinhamento por centróides de colunas de datas para reconstruir
- * grades e tabelas de provas com 100% de precisão matemática.
+ * Utiliza alinhamento por blocos verticais de colunas (Vertical Block Extraction)
+ * para reconstruir tabelas multicolunas com células verticais de múltiplas linhas.
  */
 export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<string> {
   try {
@@ -19,7 +19,7 @@ export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<string> {
 
     logger.info(
       { pages: data.numpages, textLength: text.length },
-      'Texto extraído do arquivo PDF com reconstrução de grade por centróides',
+      'Texto extraído do arquivo PDF com reconstrução vertical de colunas',
     )
 
     return text
@@ -53,9 +53,10 @@ interface PageData {
 }
 
 /**
- * Renderizador de página inteligente com detecção de centróides de colunas.
- * Identifica os eixos X das datas de cabeçalho e aloca o texto de cada disciplina
- * na coluna correspondente, mesmo com múltiplas provas na mesma célula (ex: Ciências e Inglês).
+ * Renderizador de página inteligente com extração por blocos verticais de colunas.
+ * Identifica as colunas da tabela por datas no cabeçalho e agrupa TODO o conteúdo
+ * de cada coluna de cima a baixo antes de passar para a próxima coluna,
+ * garantindo zero mistura de matérias ou páginas entre colunas vizinhas.
  */
 async function customTablePageRenderer(pageData: PageData): Promise<string> {
   const textContent = await pageData.getTextContent({
@@ -89,7 +90,7 @@ async function customTablePageRenderer(pageData: PageData): Promise<string> {
 
   lineYList.sort((a, b) => b - a)
 
-  // 2. Localizar os eixos centrais X das colunas a partir das datas (ex: 31/08, 01/09, 02/09...)
+  // 2. Localizar os eixos centrais X das colunas a partir das datas no cabeçalho (ex: 31/08, 01/09, 02/09...)
   let columnCenters: number[] = []
   for (const y of lineYList) {
     const lineItems = linesMap.get(y)!
@@ -100,12 +101,15 @@ async function customTablePageRenderer(pageData: PageData): Promise<string> {
     }
   }
 
-  // 3. Se identificou uma grade por datas, mapeia cada item à coluna mais próxima
+  // 3. Se identificou colunas de datas, agrupa o conteúdo por blocos verticais de coluna
   if (columnCenters.length >= 2) {
-    const renderedLines = lineYList.map((y) => {
-      const lineItems = linesMap.get(y)!
-      const cols = new Array(columnCenters.length).fill('')
+    const columnBlocks: string[][] = Array.from({ length: columnCenters.length }, () => [])
 
+    for (const y of lineYList) {
+      const lineItems = linesMap.get(y)!
+      lineItems.sort((a, b) => a.x - b.x)
+
+      const lineColMap = new Map<number, string[]>()
       for (const item of lineItems) {
         let bestColIdx = 0
         let minDiff = Math.abs(item.x - columnCenters[0])
@@ -116,16 +120,25 @@ async function customTablePageRenderer(pageData: PageData): Promise<string> {
             bestColIdx = c
           }
         }
-        cols[bestColIdx] = cols[bestColIdx] ? `${cols[bestColIdx]} ${item.str}` : item.str
+        if (!lineColMap.has(bestColIdx)) {
+          lineColMap.set(bestColIdx, [])
+        }
+        lineColMap.get(bestColIdx)!.push(item.str)
       }
 
-      return cols.join('   |   ')
+      lineColMap.forEach((words, colIdx) => {
+        columnBlocks[colIdx].push(words.join(' '))
+      })
+    }
+
+    const resultBlocks = columnBlocks.map((lines, colIdx) => {
+      return `--- [COLUNA DA TABELA ${colIdx + 1}] ---\n${lines.join('\n')}`
     })
 
-    return renderedLines.join('\n')
+    return resultBlocks.join('\n\n')
   }
 
-  // Fallback agnóstico para documentos sem tabela de datas
+  // Fallback para documentos textuais sem tabelas de datas
   const renderedLines = lineYList.map((y) => {
     const lineItems = linesMap.get(y)!
     lineItems.sort((a, b) => a.x - b.x)
