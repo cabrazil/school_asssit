@@ -168,7 +168,22 @@ function formatWhatsAppEventResponse(
     .map((ev, idx) => {
       const number = count > 1 ? `${idx + 1}. ` : ''
       const subjectTag = ev.subject ? ` (${ev.subject})` : ''
-      const actionTag = ev.action_required ? '\n⚠️ *Sua Ação:* ' + (ev.description ?? 'Acompanhar/realizar tarefa') : ''
+      
+      const desc = ev.description ? ev.description.trim() : ''
+      const isImportantNote = /\b(importante|obs|aten[çc][ãa]o|alerta|cuidado|urgente)\b/i.test(desc)
+
+      let detailTag = ''
+      if (desc) {
+        if (isImportantNote) {
+          detailTag = `\n🚨 *Observação Importante:* ${desc}`
+        } else if (ev.action_required) {
+          detailTag = `\n⚠️ *Sua Ação:* ${desc}`
+        } else {
+          detailTag = `\n📝 *Detalhes / Conteúdo:* ${desc}`
+        }
+      } else if (ev.action_required) {
+        detailTag = `\n⚠️ *Sua Ação:* Acompanhar/realizar tarefa com a escola`
+      }
       
       const dateRange = ev.start_date && ev.due_date && ev.start_date !== ev.due_date
         ? `${formatDate(ev.start_date)} até ${formatDate(ev.due_date)}`
@@ -176,7 +191,7 @@ function formatWhatsAppEventResponse(
 
       let block = `📌 *${number}${ev.title.toUpperCase()}*${subjectTag}`
       block += `\n🗓️ *Prazo:* ${dateRange}`
-      if (actionTag) block += actionTag
+      if (detailTag) block += detailTag
       if (ev.target_scope || ev.target_grade) {
         const targetStr = ev.target_grade ?? translateScope(ev.target_scope)
         block += `\n👤 *Público:* ${targetStr}`

@@ -19,7 +19,7 @@ Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado ou text
    - Os documentos podem vir em formato de texto simples, listas, tabelas ou grades extraídas de PDFs.
    - **Tabelas e Grades de Provas**: Quando o documento contiver um calendário/tabela de avaliações ou exames (com datas e matérias), EXTRAIA CADA AVALIAÇÃO COMO UM EVENTO SEPARADO do tipo "prova".
    - **Atribuição Correta de Datas**: Se uma mesma data/dia da semana contiver mais de uma disciplina (ex: duas matérias no mesmo dia), crie um evento separado para CADA disciplina, garantindo que ambas recebam a mesma data exata.
-   - **Busca de Detalhes no Documento**: Para cada prova ou tarefa identificada, procure no restante do texto os tópicos de estudo, capítulos, módulos ou observações correspondentes e inclua no campo \`description\`.
+   - **Busca de Detalhes e Observações Importantes (CRÍTICO)**: Avisos contendo "Observação importante", "Atenção", "OBS:" ou orientações especiais para os pais (ex: conferir assinaturas de provas, entregar materiais específicos, vestuário, autorizações) são de altíssima relevância. NUNCA omita essas observações; incorpore-as de forma clara e completa no campo \`description\` do evento correspondente.
 
 2. **NÃO INVENTE DATAS**: Se o documento não mencionar uma data ou prazo explícito (ex: DD/MM ou DD/MM/AAAA) ou relativo (ex: "amanhã", "próxima sexta"), deixe \`start_date\` ou \`due_date\` como \`null\`.
 3. **RESOLUÇÃO DE DATAS RELATIVAS**:
