@@ -137,9 +137,11 @@ export class BaileysAdapter implements IWhatsAppAdapter {
       return
     }
 
-    // Extrair número do remetente
+    // Extrair número do remetente (prioriza senderPn/participantPn se presente no pacote)
+    const key = msg.key as any
+    const senderPn = key?.senderPn ? jidToPhone(key.senderPn) : (key?.participantPn ? jidToPhone(key.participantPn) : null)
     const senderJid = msg.key.remoteJid ?? ''
-    const senderPhone = jidToPhone(senderJid)
+    const senderPhone = senderPn || jidToPhone(senderJid)
 
     if (!senderPhone) {
       this.logger.warn({ jid: senderJid }, 'JID inválido — ignorando mensagem')

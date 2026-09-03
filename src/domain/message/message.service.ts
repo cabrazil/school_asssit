@@ -41,16 +41,41 @@ export class MessageService {
       return
     }
 
-    // 2. Localizar família
-    const family = await this.familyService.findByPhone(senderPhone)
+    const replyTarget = message.senderJid ?? senderPhone
+
+    // 2. Localizar família (por telefone celular ou por LID já vinculado)
+    let family = await this.familyService.findByPhone(senderPhone)
 
     if (!family) {
+      // 2.1 Verifica se o remetente informou o número de celular para vincular o WhatsApp
+      const cleanDigits = message.content.replace(/\D/g, '')
+      if (cleanDigits.length >= 10 && cleanDigits.length <= 13) {
+        const candidateFamily = await this.familyService.findByPhone(cleanDigits)
+        if (candidateFamily) {
+          family = await this.familyService.linkLid(candidateFamily.id, senderPhone)
+          const welcomeLinked = `✅ *Perfeito, ${family.name}! Seu WhatsApp foi conectado com sucesso ao School Assist.* 🎓\n\nAgora você já pode me enviar avisos, recados e tarefas escolares da sua família por aqui! 💙`
+          await this.whatsapp.sendMessage(replyTarget, welcomeLinked)
+          return
+        }
+      }
+
       logger.warn(
         { senderPhone, masked: maskPhone(senderPhone) },
-        `Mensagem recebida de número não cadastrado (${senderPhone}) — ignorando`,
+        `Mensagem recebida de número/LID não cadastrado (${senderPhone}) — enviando orientação`,
       )
-      // Não responder a números desconhecidos (prevenção de spam/abuso)
+
+      const welcomePrompt = `Olá! 👋 Bem-vindo ao *School Assist*.\n\nNão localizei o seu cadastro direto pelo WhatsApp. Se você já cadastrou sua família, por favor *responda apenas com o seu número de celular com DDD* (ex: *11999998888*) para conectar o seu acesso.`
+      await this.whatsapp.sendMessage(replyTarget, welcomePrompt)
       return
+    }
+
+    // 2.2 Se o remetente for um LID e ainda não estiver salvo na família encontrada, auto-vincula silenciosamente
+    if (senderPhone.length > 13 && !(family as any).whatsapp_lid) {
+      try {
+        await this.familyService.linkLid(family.id, senderPhone)
+      } catch (err) {
+        logger.warn({ familyId: family.id, err }, 'Falha silenciosa ao auto-vincular LID')
+      }
     }
 
     // 3. Persistir mensagem
@@ -73,7 +98,6 @@ export class MessageService {
       'Mensagem persistida com sucesso',
     )
 
-    const replyTarget = message.senderJid ?? senderPhone
     const isPdf = message.content.includes('[CONTEÚDO DO DOCUMENTO PDF]:')
 
     // Personaliza a mensagem com o nome do responsável (ex: Vanessa, Claudia, Ana, Fabio)
@@ -104,7 +128,7 @@ export class MessageService {
           receivedAt,
           familyId: family.id,
           familyName: family.name,
-          children: family.children?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })),
+          children: (family as any).children?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })),
         })
 
         logger.info(

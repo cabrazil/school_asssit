@@ -3,19 +3,20 @@ import { prisma } from '../prisma.client'
 
 export class FamilyRepository {
   /**
-   * Localiza uma família pelo número de telefone WhatsApp.
+   * Localiza uma família pelo número de telefone WhatsApp ou pelo LID.
    * Normaliza o número removendo caracteres não numéricos.
    */
-  async findByPhone(phone: string) {
-    const normalized = normalizePhone(phone)
+  async findByPhone(identifier: string) {
+    const normalized = normalizePhone(identifier)
     const lastDigits = normalized.slice(-8)
 
-    // Busca por correspondência exata
+    // 1. Busca por correspondência exata em whatsapp_phone OU whatsapp_lid
     const exact = await prisma.family.findFirst({
       where: {
-        whatsapp_phone: {
-          in: [phone, normalized],
-        },
+        OR: [
+          { whatsapp_phone: { in: [identifier, normalized] } },
+          { whatsapp_lid: { in: [identifier, normalized] } },
+        ],
       },
       include: {
         children: true,
@@ -24,8 +25,8 @@ export class FamilyRepository {
 
     if (exact) return exact
 
-    // Se não encontrou exato, busca por famílias cujo número termina com os mesmos 8+ dígitos
-    if (lastDigits.length >= 8) {
+    // 2. Se não encontrou exato e for um telefone (não um LID), busca pelos últimos 8+ dígitos
+    if (lastDigits.length >= 8 && normalized.length <= 13) {
       const allFamilies = await prisma.family.findMany({
         include: { children: true },
       })
@@ -36,14 +37,21 @@ export class FamilyRepository {
       })
 
       if (matched) return matched
-
-      // Fallback para desenvolvimento: se existir apenas 1 família cadastrada no sistema, associa a ela
-      if (allFamilies.length === 1) {
-        return allFamilies[0]
-      }
     }
 
     return null
+  }
+
+  /**
+   * Vincula o LID do WhatsApp a uma família já cadastrada.
+   */
+  async linkLid(familyId: string, lid: string) {
+    const normalizedLid = normalizePhone(lid)
+    return prisma.family.update({
+      where: { id: familyId },
+      data: { whatsapp_lid: normalizedLid },
+      include: { children: true },
+    })
   }
 
   async findById(id: string): Promise<Family | null> {

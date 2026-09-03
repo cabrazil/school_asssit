@@ -25,6 +25,7 @@ model Family {
   id                String           @id @default(uuid())
   name              String
   whatsapp_phone    String           @unique
+  whatsapp_lid      String?          @unique
   calendar_provider CalendarProvider @default(OUTLOOK_PERSONAL)
   created_at        DateTime         @default(now())
   updated_at        DateTime         @updatedAt
