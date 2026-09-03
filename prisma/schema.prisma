@@ -14,12 +14,20 @@ datasource db {
 // ----------------------------------------------------------------
 // Family — representa uma família/responsável cadastrada
 // ----------------------------------------------------------------
+enum CalendarProvider {
+  OUTLOOK_PERSONAL
+  OUTLOOK_WORK
+  GOOGLE_PERSONAL
+  NONE
+}
+
 model Family {
-  id             String   @id @default(uuid())
-  name           String
-  whatsapp_phone String   @unique
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                String           @id @default(uuid())
+  name              String
+  whatsapp_phone    String           @unique
+  calendar_provider CalendarProvider @default(OUTLOOK_PERSONAL)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
 
   children      Child[]
   messages      Message[]

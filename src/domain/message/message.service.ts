@@ -5,6 +5,7 @@ import type { IWhatsAppAdapter } from '../../adapters/whatsapp/whatsapp.interfac
 import { FamilyService } from '../family/family.service'
 import { MessageRepository } from '../../infrastructure/database/repositories/message.repository'
 import type { SchoolMessageInterpreter } from '../interpreter/school-message-interpreter.service'
+import { buildCalendarUrl } from './calendar-url.builder'
 
 const logger = pino({ level: env.LOG_LEVEL, name: 'message-service' })
 
@@ -129,6 +130,7 @@ export class MessageService {
         const formattedResponse = formatWhatsAppEventResponse(
           interpretation.result,
           family.name,
+          (family as any).calendar_provider,
         )
 
         await this.whatsapp.sendMessage(replyTarget, formattedResponse)
@@ -153,6 +155,7 @@ export class MessageService {
 function formatWhatsAppEventResponse(
   result: { relevant: boolean; events: Array<{ type: string; title: string; description?: string | null; subject?: string | null; start_date?: string | null; due_date?: string | null; action_required: boolean; target_scope?: string | null; target_grade?: string | null; url?: string | null }> },
   familyName: string,
+  calendarProvider?: string,
 ): string {
   if (!result.relevant || result.events.length === 0) {
     return [
@@ -200,9 +203,14 @@ function formatWhatsAppEventResponse(
         block += `\n🔗 *Link:* ${ev.url}`
       }
       
-      const outlookUrl = buildOutlookCalendarUrl(ev.title, ev.due_date ?? ev.start_date, ev.description)
-      if (outlookUrl) {
-        block += `\n📅 *MS Outlook:* ${outlookUrl}`
+      const calendarLink = buildCalendarUrl(
+        calendarProvider,
+        ev.title,
+        ev.due_date ?? ev.start_date,
+        ev.description,
+      )
+      if (calendarLink) {
+        block += `\n📅 *${calendarLink.providerLabel}:* ${calendarLink.url}`
       }
 
       return block
@@ -230,31 +238,6 @@ function translateScope(scope?: string | null): string {
     case 'family': return 'Responsáveis'
     case 'school': return 'Toda a escola'
     default: return 'Escola'
-  }
-}
-
-/**
- * Gera URL de deep-link para salvar o evento diretamente no MS Outlook (Web/Mobile App).
- */
-function buildOutlookCalendarUrl(title: string, dateStr?: string | null, details?: string | null): string | null {
-  if (!dateStr) return null
-  try {
-    const startIso = `${dateStr}T08:00:00Z`
-    const endIso = `${dateStr}T09:00:00Z`
-
-    const params = new URLSearchParams({
-      path: '/calendar/action/compose',
-      rru: 'addevent',
-      subject: `🎓 ${title}`,
-      startdt: startIso,
-      enddt: endIso,
-      allday: 'true',
-      body: details ? `Detalhes / Estudo: ${details}` : 'Compromisso registrado via School Assist',
-    })
-
-    return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`
-  } catch {
-    return null
   }
 }
 
