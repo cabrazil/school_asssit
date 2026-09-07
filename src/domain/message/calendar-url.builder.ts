@@ -17,18 +17,44 @@ export function buildCalendarUrl(
   if (!dateStr || provider === 'NONE') return null
 
   try {
-    const formattedDate = dateStr.trim()
-    const cleanDigits = formattedDate.replace(/-/g, '')
+    const trimmed = dateStr.trim().replace(' ', 'T')
+    let datePart = trimmed
+    let startHour = 8
+    let startMinute = 0
 
+    if (trimmed.includes('T')) {
+      const [d, t] = trimmed.split('T')
+      datePart = d
+      const timeMatches = t.match(/^(\d{1,2}):(\d{2})/)
+      if (timeMatches) {
+        startHour = parseInt(timeMatches[1], 10)
+        startMinute = parseInt(timeMatches[2], 10)
+      }
+    }
+
+    const cleanDigits = datePart.replace(/-/g, '')
     if (cleanDigits.length < 8) return null
+
+    let endHour = startHour + 1
+    let endMinute = startMinute
+    if (endHour >= 24) {
+      endHour = 23
+      endMinute = 59
+    }
+
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const startTimeIso = `${pad(startHour)}:${pad(startMinute)}:00`
+    const endTimeIso = `${pad(endHour)}:${pad(endMinute)}:00`
+    const startTimeCompact = `${pad(startHour)}${pad(startMinute)}00`
+    const endTimeCompact = `${pad(endHour)}${pad(endMinute)}00`
 
     const titleWithEmoji = `🎓 ${title}`
     const bodyContent = details ? `Detalhes / Estudo: ${details}` : 'Compromisso registrado via School Assist'
 
     switch (provider) {
       case 'OUTLOOK_WORK': {
-        const startIso = `${formattedDate}T08:00:00`
-        const endIso = `${formattedDate}T09:00:00`
+        const startIso = `${datePart}T${startTimeIso}`
+        const endIso = `${datePart}T${endTimeIso}`
         const params = new URLSearchParams({
           path: '/calendar/action/compose',
           rru: 'addevent',
@@ -44,8 +70,8 @@ export function buildCalendarUrl(
       }
 
       case 'GOOGLE_PERSONAL': {
-        const startIso = `${cleanDigits}T080000`
-        const endIso = `${cleanDigits}T090000`
+        const startIso = `${cleanDigits}T${startTimeCompact}`
+        const endIso = `${cleanDigits}T${endTimeCompact}`
         const params = new URLSearchParams({
           action: 'TEMPLATE',
           text: titleWithEmoji,
@@ -60,8 +86,8 @@ export function buildCalendarUrl(
 
       case 'OUTLOOK_PERSONAL':
       default: {
-        const startIso = `${formattedDate}T08:00:00`
-        const endIso = `${formattedDate}T09:00:00`
+        const startIso = `${datePart}T${startTimeIso}`
+        const endIso = `${datePart}T${endTimeIso}`
         const params = new URLSearchParams({
           rru: 'addevent',
           subject: titleWithEmoji,

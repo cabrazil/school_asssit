@@ -247,6 +247,14 @@ function formatWhatsAppEventResponse(
 }
 
 function formatDate(dateStr: string): string {
+  if (dateStr.includes('T')) {
+    const [datePart, timePart] = dateStr.split('T')
+    const [year, month, day] = datePart.split('-')
+    const timeClean = timePart.slice(0, 5) // HH:mm
+    if (year && month && day) {
+      return `${day}/${month}/${year} às ${timeClean}`
+    }
+  }
   const parts = dateStr.split('-')
   if (parts.length === 3) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`

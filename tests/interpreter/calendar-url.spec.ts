@@ -36,3 +36,22 @@ test('Retorna null se a data for inválida ou vazia', () => {
   assert.equal(buildCalendarUrl('OUTLOOK_PERSONAL', 'Teste', ''), null)
   assert.equal(buildCalendarUrl('OUTLOOK_PERSONAL', 'Teste', null), null)
 })
+
+test('Gera URL respeitando horário específico informado (ex: 15:00)', () => {
+  // Google Agenda com horário 15h
+  const googleRes = buildCalendarUrl('GOOGLE_PERSONAL', 'Reunião de Pais', '2026-09-08T15:00:00')
+  assert.ok(googleRes)
+  assert.ok(googleRes.url.includes('20260908T150000%2F20260908T160000'))
+
+  // Outlook Corporativo com horário 15h
+  const outlookWorkRes = buildCalendarUrl('OUTLOOK_WORK', 'Reunião de Pais', '2026-09-08T15:00:00')
+  assert.ok(outlookWorkRes)
+  assert.ok(outlookWorkRes.url.includes('startdt=2026-09-08T15%3A00%3A00'))
+  assert.ok(outlookWorkRes.url.includes('enddt=2026-09-08T16%3A00%3A00'))
+
+  // Outlook Pessoal com horário 14:30
+  const outlookPersRes = buildCalendarUrl('OUTLOOK_PERSONAL', 'Plantão Pedagógico', '2026-09-08T14:30:00')
+  assert.ok(outlookPersRes)
+  assert.ok(outlookPersRes.url.includes('startdt=2026-09-08T14%3A30%3A00'))
+  assert.ok(outlookPersRes.url.includes('enddt=2026-09-08T15%3A30%3A00'))
+})

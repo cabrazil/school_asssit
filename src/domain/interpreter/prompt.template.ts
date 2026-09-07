@@ -20,11 +20,12 @@ Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado ou text
    - **ISOLAMENTO TOTAL DE COLUNAS EM TABELAS**: Quando o documento estiver dividido em colunas (ex: marcadas como "--- [COLUNA DA TABELA N] ---" ou organizadas por matérias), CADA COLUNA É UMA DISCIPLINA/AVALIAÇÃO TOTALMENTE INDEPENDENTE COM SUA PRÓPRIA DATA E CONTEÚDO. NUNCA agrupe duas colunas consecutivas de datas diferentes em um único evento com intervalo de datas (ex: NUNCA crie "Avaliação de Inglês - Produção de Texto" de 31/08 a 01/09). Crie 1 evento separado para a Coluna 1 (ex: AVALIAÇÃO DE INGLÊS em 31/08/2026), 1 evento separado para a Coluna 2 (ex: PRODUÇÃO DE TEXTO em 01/09/2026), 1 evento separado para a Coluna 3 (ex: AVALIAÇÃO MULTIDISCIPLINAR em 02/09/2026) e 1 evento separado para a Coluna 4 (ex: AVALIAÇÃO DE MATEMÁTICA em 03/09/2026).
    - **Busca de Detalhes e Observações Importantes (CRÍTICO)**: Avisos contendo "Observação importante", "Atenção", "OBS:" ou orientações especiais para os pais (ex: conferir assinaturas de provas, entregar materiais específicos, vestuário, autorizações) são de altíssima relevância. NUNCA omita essas observações; incorpore-as de forma clara e completa no campo \`description\` do evento correspondente.
 
-2. **NÃO INVENTE DATAS**: Se o documento não mencionar uma data ou prazo explícito (ex: DD/MM ou DD/MM/AAAA) ou relativo (ex: "amanhã", "próxima sexta"), deixe \`start_date\` ou \`due_date\` como \`null\`.
-3. **RESOLUÇÃO DE DATAS RELATIVAS**:
+2. **NÃO INVENTE DATAS OU HORÁRIOS**: Se o documento não mencionar uma data ou prazo explícito (ex: DD/MM ou DD/MM/AAAA) ou relativo (ex: "amanhã", "próxima sexta"), deixe \`start_date\` ou \`due_date\` como \`null\`.
+3. **RESOLUÇÃO DE DATAS E HORÁRIOS**:
    - "amanhã": adicione 1 dia à data da mensagem.
    - "hoje": use a data da mensagem.
    - "próxima semana": se houver um dia mencionado (ex: "próxima quarta"), calcule a data exata com base na data de recebimento.
+   - **HORÁRIOS ESPECÍFICOS (CRÍTICO)**: Se a mensagem mencionar um horário específico para o compromisso ou reunião (ex: "15h", "às 14:30", "19:00"), preencha \`start_date\` e \`due_date\` incluindo a hora no formato ISO 8601 (ex: \`YYYY-MM-DDTHH:mm:ss\`, como \`2026-09-08T15:00:00\`). Se não houver horário especificado na mensagem (apenas o dia), preencha no formato \`YYYY-MM-DD\`.
 4. **MÚLTIPLOS EVENTOS**: Uma única mensagem ou PDF pode gerar múltiplos eventos se contiver várias avaliações, tarefas ou prazos distintos.
 5. **AÇÃO DA FAMÍLIA (action_required)**:
    - \`true\`: se os responsáveis ou a criança precisam agir ativamente (ex: assinar prova, preencher formulário, enviar material, entregar trabalho).
@@ -47,8 +48,8 @@ Sua resposta deve ser estritamente um objeto JSON válido no seguinte formato:
       "title": "string",
       "description": "string | null",
       "subject": "string | null",
-      "start_date": "YYYY-MM-DD | null",
-      "due_date": "YYYY-MM-DD | null",
+      "start_date": "YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss | null",
+      "due_date": "YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss | null",
       "action_required": boolean,
       "target_scope": "child" | "class" | "grade" | "family" | "school",
       "target_grade": "string | null",
