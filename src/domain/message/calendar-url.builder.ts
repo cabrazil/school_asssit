@@ -30,6 +30,7 @@ export function buildCalendarUrl(
         const startIso = `${formattedDate}T08:00:00`
         const endIso = `${formattedDate}T09:00:00`
         const params = new URLSearchParams({
+          path: '/calendar/action/compose',
           rru: 'addevent',
           subject: titleWithEmoji,
           startdt: startIso,
@@ -38,7 +39,7 @@ export function buildCalendarUrl(
         })
         return {
           providerLabel: 'MS Outlook Work',
-          url: `https://outlook.office.com/calendar/0/action/compose?${params.toString()}`,
+          url: `https://outlook.office.com/calendar/deeplink/compose?${params.toString()}`,
         }
       }
 

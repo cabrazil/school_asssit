@@ -14,7 +14,8 @@ test('Gera URL para MS Outlook Work / Corporativo', () => {
   const result = buildCalendarUrl('OUTLOOK_WORK', 'Reunião de Pais', '2026-09-20', 'Auditório principal')
   assert.ok(result)
   assert.equal(result.providerLabel, 'MS Outlook Work')
-  assert.ok(result.url.includes('https://outlook.office.com/calendar/0/action/compose'))
+  assert.ok(result.url.includes('https://outlook.office.com/calendar/deeplink/compose'))
+  assert.ok(result.url.includes('path=%2Fcalendar%2Faction%2Fcompose'))
   assert.ok(result.url.includes('Reuni%C3%A3o+de+Pais'))
 })
 
