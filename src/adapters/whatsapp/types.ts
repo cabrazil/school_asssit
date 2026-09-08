@@ -14,6 +14,10 @@ export interface IncomingMessage {
   content: string
   /** Timestamp de recebimento */
   receivedAt: Date
+  /** Imagem codificada em Base64 (se a mensagem contiver foto/imagem) */
+  imageBase64?: string
+  /** Mimetype da imagem (ex: 'image/jpeg', 'image/png') */
+  imageMimeType?: string
   /**
    * Payload bruto original.
    * Armazenado para auditoria; nunca deve aparecer em logs.

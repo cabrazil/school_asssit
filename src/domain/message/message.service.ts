@@ -99,10 +99,13 @@ export class MessageService {
     )
 
     const isPdf = message.content.includes('[CONTEÚDO DO DOCUMENTO PDF]:')
+    const isImage = !!message.imageBase64 || message.content.includes('[IMAGEM/FOTO RECEBIDA]')
 
     // Personaliza a mensagem com o nome do responsável (ex: Vanessa, Claudia, Ana, Fabio)
     const confirmationText = isPdf
       ? `📄 *Arquivo PDF recebido, ${family.name}!*\n⏳ *Estou lendo o documento e organizando o calendário de eventos da sua família... Aguarde alguns instantes!*`
+      : isImage
+      ? `📷 *Foto/Convite recebido, ${family.name}!*\n⏳ *Estou analisando a imagem e organizando o evento na sua agenda... Aguarde alguns instantes!*`
       : `✅ *Mensagem recebida, ${family.name}!*`
 
     // 4. Confirmar recebimento pelo WhatsApp
@@ -129,6 +132,8 @@ export class MessageService {
           familyId: family.id,
           familyName: family.name,
           children: (family as any).children?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })),
+          imageBase64: message.imageBase64,
+          imageMimeType: message.imageMimeType,
         })
 
         logger.info(

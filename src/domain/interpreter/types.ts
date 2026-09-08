@@ -52,4 +52,6 @@ export interface InterpretationContext {
   familyName?: string
   childrenNames?: string[]
   currentDate?: Date
+  imageBase64?: string
+  imageMimeType?: string
 }

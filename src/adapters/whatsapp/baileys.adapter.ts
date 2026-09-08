@@ -150,6 +150,8 @@ export class BaileysAdapter implements IWhatsAppAdapter {
 
     // Extrair conteúdo textual (legenda, conversa, etc.)
     let content = extractTextContent(msg)
+    let imageBase64: string | undefined
+    let imageMimeType: string | undefined
 
     // Se a mensagem contiver um anexo PDF, baixa e extrai o texto do documento
     const pdfBuffer = await this.tryDownloadPdfBuffer(msg)
@@ -160,10 +162,18 @@ export class BaileysAdapter implements IWhatsAppAdapter {
       }
     }
 
-    if (!content) {
+    // Se a mensagem contiver uma foto/imagem (convite, circular, cartaz), baixa o buffer
+    const imgData = await this.tryDownloadImageBuffer(msg)
+    if (imgData) {
+      imageBase64 = imgData.buffer.toString('base64')
+      imageMimeType = imgData.mimeType
+      content = content ? `${content}\n\n[IMAGEM/FOTO RECEBIDA]` : '[IMAGEM/FOTO RECEBIDA]'
+    }
+
+    if (!content && !imageBase64) {
       this.logger.info(
         { messageId: id, sender: maskPhone(senderPhone) },
-        'Mensagem sem conteúdo textual — ignorando',
+        'Mensagem sem conteúdo textual ou de imagem — ignorando',
       )
       return
     }
@@ -177,8 +187,10 @@ export class BaileysAdapter implements IWhatsAppAdapter {
       id,
       senderPhone,
       senderJid,
-      content,
+      content: content ?? '[IMAGEM/FOTO RECEBIDA]',
       receivedAt,
+      imageBase64,
+      imageMimeType,
       rawPayload: msg as unknown as Record<string, unknown>,
     }
 
@@ -188,6 +200,7 @@ export class BaileysAdapter implements IWhatsAppAdapter {
         messageId: id,
         sender: maskPhone(senderPhone),
         receivedAt,
+        hasImage: !!imageBase64,
       },
       'Mensagem recebida',
     )
@@ -227,6 +240,35 @@ export class BaileysAdapter implements IWhatsAppAdapter {
       }
     } catch (error) {
       this.logger.error({ error }, 'Erro ao baixar arquivo PDF do WhatsApp')
+    }
+    return null
+  }
+
+  private async tryDownloadImageBuffer(
+    msg: proto.IWebMessageInfo,
+  ): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    try {
+      let m = msg.message
+      if (m?.ephemeralMessage?.message) m = m.ephemeralMessage.message
+      if (m?.viewOnceMessage?.message) m = m.viewOnceMessage.message
+      if (m?.viewOnceMessageV2?.message) m = m.viewOnceMessageV2.message
+      if (m?.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message
+
+      const img = m?.imageMessage
+      if (img) {
+        this.logger.info({ mimeType: img.mimetype }, 'Imagem/foto detectada — baixando arquivo...')
+        const buffer = await downloadMediaMessage(msg, 'buffer', {})
+        return { buffer: buffer as Buffer, mimeType: img.mimetype ?? 'image/jpeg' }
+      }
+
+      const doc = m?.documentMessage
+      if (doc && doc.mimetype?.startsWith('image/')) {
+        this.logger.info({ fileName: doc.fileName, mimeType: doc.mimetype }, 'Imagem enviada como documento — baixando...')
+        const buffer = await downloadMediaMessage(msg, 'buffer', {})
+        return { buffer: buffer as Buffer, mimeType: doc.mimetype }
+      }
+    } catch (error) {
+      this.logger.error({ error }, 'Erro ao baixar arquivo de imagem do WhatsApp')
     }
     return null
   }

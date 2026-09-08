@@ -49,6 +49,20 @@ export class LLMAIAdapter implements IAIProvider {
         headers['X-Title'] = 'School Assist'
       }
 
+      let userContent: any = userPrompt
+      if (context.imageBase64) {
+        const mime = context.imageMimeType || 'image/jpeg'
+        userContent = [
+          { type: 'text', text: userPrompt },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mime};base64,${context.imageBase64}`,
+            },
+          },
+        ]
+      }
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers,
@@ -56,7 +70,7 @@ export class LLMAIAdapter implements IAIProvider {
           model: this.model,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
+            { role: 'user', content: userContent },
           ],
           response_format: { type: 'json_object' },
           temperature: 0.1,

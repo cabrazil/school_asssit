@@ -13,6 +13,8 @@ export interface InterpretMessageInput {
   familyId: string
   familyName?: string
   children?: Array<{ id: string; name: string }>
+  imageBase64?: string
+  imageMimeType?: string
 }
 
 export interface InterpretMessageOutput {
@@ -41,6 +43,8 @@ export class SchoolMessageInterpreter {
       familyName: input.familyName,
       childrenNames: input.children?.map((c) => c.name),
       currentDate: new Date(),
+      imageBase64: input.imageBase64,
+      imageMimeType: input.imageMimeType,
     }
 
     logger.info(
