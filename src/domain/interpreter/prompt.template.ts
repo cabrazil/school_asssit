@@ -86,7 +86,11 @@ export function buildUserPrompt(context: InterpretationContext): string {
     userPrompt += `\n- Filhos cadastrados: ${context.childrenNames.join(', ')}`
   }
 
-  userPrompt += `\n\n### CONTEÚDO DA MENSAGEM OU DOCUMENTO PDF\n"""\n${context.messageContent}\n"""`
+  userPrompt += `\n\n### CONTEÚDO DA MENSAGEM OU DOCUMENTO\n"""\n${context.messageContent}\n"""`
+
+  if (context.imageBase64) {
+    userPrompt += `\n\n📸 ATENÇÃO: Uma imagem/foto foi anexada a esta mensagem (convite de aniversário, circular escolar fotografada, cartaz de evento ou comunicado). Por favor, leia atentamente todo o texto visível na imagem, identifique o evento, título, data, horário e endereço/local completo e retorne o JSON estruturado.`
+  }
 
   return userPrompt
 }

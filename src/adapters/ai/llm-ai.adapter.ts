@@ -11,6 +11,7 @@ export interface LLMConfig {
   apiKey?: string
   baseUrl?: string
   model?: string
+  visionModel?: string
 }
 
 /**
@@ -21,11 +22,16 @@ export class LLMAIAdapter implements IAIProvider {
   private apiKey: string
   private baseUrl: string
   private model: string
+  private visionModel: string
 
   constructor(config?: LLMConfig) {
     this.apiKey = config?.apiKey ?? process.env.AI_API_KEY ?? ''
     this.baseUrl = config?.baseUrl ?? process.env.AI_BASE_URL ?? 'https://api.openai.com/v1'
     this.model = config?.model ?? process.env.AI_MODEL ?? 'gpt-4o-mini'
+    this.visionModel =
+      config?.visionModel ??
+      process.env.AI_VISION_MODEL ??
+      (this.model.includes('deepseek') ? 'openai/gpt-4o-mini' : this.model)
   }
 
   async extractEvents(context: InterpretationContext): Promise<InterpretationResult> {
@@ -36,6 +42,7 @@ export class LLMAIAdapter implements IAIProvider {
 
     const systemPrompt = buildSystemPrompt()
     const userPrompt = buildUserPrompt(context)
+    const activeModel = context.imageBase64 ? this.visionModel : this.model
 
     try {
       const headers: Record<string, string> = {
@@ -67,7 +74,7 @@ export class LLMAIAdapter implements IAIProvider {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model: this.model,
+          model: activeModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userContent },
@@ -79,7 +86,10 @@ export class LLMAIAdapter implements IAIProvider {
 
       if (!response.ok) {
         const errorText = await response.text()
-        logger.error({ status: response.status, errorText }, 'Erro na resposta da API de LLM')
+        logger.error(
+          { status: response.status, errorText, model: activeModel },
+          'Erro na resposta da API de LLM',
+        )
         return { relevant: false, events: [] }
       }
 
