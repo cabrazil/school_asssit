@@ -26,6 +26,22 @@ export interface IWhatsAppAdapter {
   sendMessage(to: string, text: string): Promise<void>
 
   /**
+   * Envia um arquivo/documento (como .ics ou .pdf) para um número WhatsApp.
+   * @param to Número ou JID do destinatário
+   * @param document Buffer do arquivo
+   * @param fileName Nome do arquivo para exibição
+   * @param mimetype Mimetype do arquivo (ex: 'text/calendar')
+   * @param caption Legenda opcional do documento
+   */
+  sendDocument(
+    to: string,
+    document: Buffer,
+    fileName: string,
+    mimetype?: string,
+    caption?: string,
+  ): Promise<void>
+
+  /**
    * Encerra a conexão de forma limpa.
    */
   disconnect(): Promise<void>

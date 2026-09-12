@@ -55,3 +55,10 @@ test('Gera URL respeitando horário específico informado (ex: 15:00)', () => {
   assert.ok(outlookPersRes.url.includes('startdt=2026-09-08T14%3A30%3A00'))
   assert.ok(outlookPersRes.url.includes('enddt=2026-09-08T15%3A30%3A00'))
 })
+
+test('Gera label e instrução de anexo para APPLE_CALENDAR', () => {
+  const result = buildCalendarUrl('APPLE_CALENDAR', 'Aniversário da Maria Clara', '2026-09-29T15:30:00')
+  assert.ok(result)
+  assert.equal(result.providerLabel, 'Apple Calendar')
+  assert.ok(result.url.includes('.ics'))
+})

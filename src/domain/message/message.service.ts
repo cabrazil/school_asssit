@@ -6,6 +6,7 @@ import { FamilyService } from '../family/family.service'
 import { MessageRepository } from '../../infrastructure/database/repositories/message.repository'
 import type { SchoolMessageInterpreter } from '../interpreter/school-message-interpreter.service'
 import { buildCalendarUrl } from './calendar-url.builder'
+import { buildIcsCalendar } from './ics-calendar.builder'
 
 const logger = pino({ level: env.LOG_LEVEL, name: 'message-service' })
 
@@ -167,6 +168,48 @@ export class MessageService {
           { messageId: savedMessage.id, target: maskPhone(replyTarget) },
           'Resposta estruturada da IA enviada via WhatsApp',
         )
+
+        // 7. Se o provedor for APPLE_CALENDAR, envia o arquivo .ics para adicionar com 1 toque
+        if (
+          (family as any).calendar_provider === 'APPLE_CALENDAR' &&
+          interpretation.result.relevant &&
+          interpretation.result.events.length > 0
+        ) {
+          try {
+            const icsContent = buildIcsCalendar(
+              interpretation.result.events.map((e) => ({
+                title: e.title,
+                dateStr: e.due_date ?? e.start_date,
+                description: e.description,
+              })),
+            )
+            const firstTitle = interpretation.result.events[0].title
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-zA-Z0-9\s_-]/g, '')
+              .trim()
+              .replace(/\s+/g, '_')
+              .slice(0, 30)
+
+            const fileName = `${firstTitle || 'evento'}.ics`
+            await this.whatsapp.sendDocument(
+              replyTarget,
+              Buffer.from(icsContent, 'utf-8'),
+              fileName,
+              'text/calendar',
+              '📅 Toque no arquivo acima para adicionar ao seu Apple Calendar',
+            )
+            logger.info(
+              { messageId: savedMessage.id, fileName, target: maskPhone(replyTarget) },
+              'Arquivo .ics do Apple Calendar enviado via WhatsApp',
+            )
+          } catch (icsError) {
+            logger.error(
+              { messageId: savedMessage.id, error: icsError },
+              'Erro ao enviar arquivo .ics para Apple Calendar',
+            )
+          }
+        }
       } catch (error) {
         logger.error(
           { messageId: savedMessage.id, error },

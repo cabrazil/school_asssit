@@ -1,4 +1,4 @@
-export type CalendarProviderType = 'OUTLOOK_PERSONAL' | 'OUTLOOK_WORK' | 'GOOGLE_PERSONAL' | 'NONE'
+export type CalendarProviderType = 'OUTLOOK_PERSONAL' | 'OUTLOOK_WORK' | 'GOOGLE_PERSONAL' | 'APPLE_CALENDAR' | 'NONE'
 
 export interface CalendarLinkInfo {
   providerLabel: string
@@ -81,6 +81,13 @@ export function buildCalendarUrl(
         return {
           providerLabel: 'Google Agenda',
           url: `https://calendar.google.com/calendar/render?${params.toString()}`,
+        }
+      }
+
+      case 'APPLE_CALENDAR': {
+        return {
+          providerLabel: 'Apple Calendar',
+          url: '📎 Arquivo .ics anexado abaixo para adicionar com 1 toque no iPhone/Mac',
         }
       }
 

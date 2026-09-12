@@ -113,6 +113,27 @@ export class BaileysAdapter implements IWhatsAppAdapter {
     this.logger.info({ to: maskPhone(to) }, 'Mensagem enviada')
   }
 
+  async sendDocument(
+    to: string,
+    document: Buffer,
+    fileName: string,
+    mimetype = 'application/octet-stream',
+    caption?: string,
+  ): Promise<void> {
+    if (!this.socket) {
+      throw new Error('WhatsApp não conectado')
+    }
+
+    const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`
+    await this.socket.sendMessage(jid, {
+      document,
+      fileName,
+      mimetype,
+      caption,
+    })
+    this.logger.info({ to: maskPhone(to), fileName }, 'Documento enviado via WhatsApp')
+  }
+
   async disconnect(): Promise<void> {
     if (this.socket) {
       await this.socket.logout()
