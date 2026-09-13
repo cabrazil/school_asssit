@@ -169,21 +169,25 @@ export class MessageService {
           'Resposta estruturada da IA enviada via WhatsApp',
         )
 
-        // 7. Se o provedor for APPLE_CALENDAR, envia o arquivo .ics para adicionar com 1 toque
+        // 7. Se o provedor for APPLE_CALENDAR, envia o arquivo .ics para adicionar com 1 toque (apenas para eventos de agenda)
+        const calendarEvents = interpretation.result.events.filter(
+          (e) => e.type !== 'comunicado_alerta',
+        )
+
         if (
           (family as any).calendar_provider === 'APPLE_CALENDAR' &&
           interpretation.result.relevant &&
-          interpretation.result.events.length > 0
+          calendarEvents.length > 0
         ) {
           try {
             const icsContent = buildIcsCalendar(
-              interpretation.result.events.map((e) => ({
+              calendarEvents.map((e) => ({
                 title: e.title,
                 dateStr: e.due_date ?? e.start_date,
                 description: e.description,
               })),
             )
-            const firstTitle = interpretation.result.events[0].title
+            const firstTitle = calendarEvents[0].title
               .normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '')
               .replace(/[^a-zA-Z0-9\s_-]/g, '')
@@ -224,7 +228,7 @@ export class MessageService {
  * Formata os eventos escolares identificados pela IA em uma mensagem
  * extremamente objetiva e amigável para o responsável.
  */
-function formatWhatsAppEventResponse(
+export function formatWhatsAppEventResponse(
   result: { relevant: boolean; events: Array<{ type: string; title: string; description?: string | null; subject?: string | null; start_date?: string | null; due_date?: string | null; action_required: boolean; target_scope?: string | null; target_grade?: string | null; url?: string | null }> },
   familyName: string,
   calendarProvider?: string,
@@ -237,14 +241,49 @@ function formatWhatsAppEventResponse(
   }
 
   const count = result.events.length
-  const header = `🎓 *School Assist — ${count} Compromisso${count > 1 ? 's' : ''} Registrado${count > 1 ? 's' : ''} para ${familyName}*\n`
+  const isAllAlerts = result.events.every((e) => e.type === 'comunicado_alerta')
+  const hasAlert = result.events.some((e) => e.type === 'comunicado_alerta')
+
+  let header = `🎓 *School Assist — ${count} Compromisso${count > 1 ? 's' : ''} Registrado${count > 1 ? 's' : ''} para ${familyName}*\n`
+  if (isAllAlerts) {
+    header = `🚨 *School Assist — COMUNICADO OPERACIONAL & ALERTA*\n`
+  } else if (hasAlert) {
+    header = `🎓 *School Assist — Avisos e Compromissos para ${familyName}*\n`
+  }
 
   const eventsFormatted = result.events
     .map((ev, idx) => {
       const number = count > 1 ? `${idx + 1}. ` : ''
       const subjectTag = ev.subject ? ` (${ev.subject})` : ''
-      
       const desc = ev.description ? ev.description.trim() : ''
+
+      const dateRange = ev.start_date && ev.due_date && ev.start_date !== ev.due_date
+        ? `${formatDate(ev.start_date)} até ${formatDate(ev.due_date)}`
+        : ev.due_date ? formatDate(ev.due_date) : ev.start_date ? formatDate(ev.start_date) : 'Sem data fixa'
+
+      // Formatação especial para comunicados operacionais / alertas
+      if (ev.type === 'comunicado_alerta') {
+        let block = `📌 *${number}${ev.title.toUpperCase()}*`
+        if (ev.due_date || ev.start_date) {
+          block += `\n🗓️ *Data / Período:* ${dateRange}`
+        }
+        if (desc) {
+          block += `\n\n📢 *Resumo do Comunicado:*\n${desc}`
+        }
+        if (ev.action_required) {
+          block += `\n\n⚠️ *Ação / Decisão:* Avalie as condições e orientações da escola quanto ao comparecimento.`
+        }
+        if (ev.target_scope || ev.target_grade) {
+          const targetStr = ev.target_grade ?? translateScope(ev.target_scope)
+          block += `\n👤 *Público:* ${targetStr}`
+        }
+        if (ev.url) {
+          block += `\n🔗 *Link:* ${ev.url}`
+        }
+        return block
+      }
+
+      // Formatação padrão para compromissos e tarefas de agenda
       const isImportantNote = /\b(importante|obs|aten[çc][ãa]o|alerta|cuidado|urgente)\b/i.test(desc)
 
       let detailTag = ''
@@ -259,10 +298,6 @@ function formatWhatsAppEventResponse(
       } else if (ev.action_required) {
         detailTag = `\n⚠️ *Sua Ação:* Acompanhar/realizar tarefa com a escola`
       }
-      
-      const dateRange = ev.start_date && ev.due_date && ev.start_date !== ev.due_date
-        ? `${formatDate(ev.start_date)} até ${formatDate(ev.due_date)}`
-        : ev.due_date ? formatDate(ev.due_date) : ev.start_date ? formatDate(ev.start_date) : 'Sem data fixa'
 
       let block = `📌 *${number}${ev.title.toUpperCase()}*${subjectTag}`
       block += `\n🗓️ *Prazo:* ${dateRange}`
@@ -274,7 +309,7 @@ function formatWhatsAppEventResponse(
       if (ev.url) {
         block += `\n🔗 *Link:* ${ev.url}`
       }
-      
+
       const calendarLink = buildCalendarUrl(
         calendarProvider,
         ev.title,
@@ -289,7 +324,12 @@ function formatWhatsAppEventResponse(
     })
     .join('\n\n')
 
-  const footer = `\n\n---\n💡 *${familyName}, estes compromissos foram salvos na agenda da sua família.* 💙`
+  let footer = `\n\n---\n💡 *${familyName}, estes compromissos foram salvos na agenda da sua família.* 💙`
+  if (isAllAlerts) {
+    footer = `\n\n---\n💡 *${familyName}, fique atento(a) aos comunicados e à segurança da sua família.* 🛡️`
+  } else if (hasAlert) {
+    footer = `\n\n---\n💡 *${familyName}, seus avisos e compromissos foram organizados pelo School Assist.* 💙`
+  }
 
   return header + '\n' + eventsFormatted + footer
 }

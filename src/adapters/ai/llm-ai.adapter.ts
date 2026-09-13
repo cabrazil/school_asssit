@@ -82,6 +82,7 @@ export class LLMAIAdapter implements IAIProvider {
           response_format: { type: 'json_object' },
           temperature: 0.1,
         }),
+        signal: AbortSignal.timeout(30000),
       })
 
       if (!response.ok) {

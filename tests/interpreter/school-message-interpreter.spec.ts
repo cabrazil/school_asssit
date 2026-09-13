@@ -2,6 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { SchoolMessageInterpreter } from '../../src/domain/interpreter/school-message-interpreter.service'
 import { MockAIAdapter } from '../../src/adapters/ai/mock-ai.adapter'
+import { formatWhatsAppEventResponse } from '../../src/domain/message/message.service'
 
 describe('SchoolMessageInterpreter — Suíte de Testes da 2ª Etapa', () => {
   const aiProvider = new MockAIAdapter()
@@ -236,4 +237,49 @@ Coordenação`
     assert.equal(result.events[0].target_scope, 'child')
     assert.equal(result.events[0].child_name, 'Felipe')
   })
+
+  it('13. Alerta Climático / Defesa Civil (Anglo Alphaville) — Deve gerar comunicado_alerta e formato de boletim sem link de calendário', async () => {
+    const messageContent = `Prezados responsáveis,
+
+Em razão do alerta emitido pela Defesa Civil do Estado de São Paulo para condições climáticas severas, com previsão de chuvas intensas e ventos fortes nesta sexta-feira, 11 de setembro, o Colégio Anglo Leonardo da Vinci - unidade Alphaville comunica que as aulas serão mantidas normalmente, com todo o cuidado e estrutura necessários para receber os alunos com segurança.
+
+Diante do cenário de risco nos deslocamentos, recomendamos que as famílias que preferirem manter seus filhos em casa o façam, sem qualquer prejuízo pedagógico. Para isso, informamos que:
+
+	•	As aulas desta sexta-feira não abordarão conteúdo novo, sendo dedicadas à revisão e consolidação de conteúdos já trabalhados;
+	•	Os alunos que permanecerem em casa não terão perdas em relação à matriz curricular e poderão acompanhar normalmente as aulas na próxima semana.
+
+Reforçamos que a decisão de comparecer ou não à escola fica a critério de cada família, considerando as condições de deslocamento em sua região. Caso optem por trazer os filhos, nossa equipe estará preparada para recebê-los com toda a atenção e segurança de sempre.
+
+Continuaremos acompanhando as orientações da Defesa Civil e comunicaremos novas atualizações caso sejam necessárias.
+
+A segurança de nossos alunos e famílias é sempre a nossa prioridade.
+
+Atenciosamente,
+Direção de unidade
+Colégio Anglo Leonardo da Vinci`
+
+    const { result } = await interpreter.interpret({
+      ...defaultInput,
+      content: messageContent,
+    })
+
+    assert.equal(result.relevant, true)
+    assert.equal(result.events.length, 1)
+
+    const alertEvent = result.events[0]
+    assert.equal(alertEvent.type, 'comunicado_alerta')
+    assert.equal(alertEvent.action_required, true)
+    assert.equal(alertEvent.target_scope, 'school')
+    assert.equal(alertEvent.due_date, '2026-09-11')
+
+    // Valida formatação do WhatsApp
+    const formatted = formatWhatsAppEventResponse(result, 'Vanessa', 'GOOGLE_PERSONAL')
+    assert.match(formatted, /🚨 \*School Assist — COMUNICADO OPERACIONAL & ALERTA\*/)
+    assert.match(formatted, /ALERTA METEOROLÓGICO/i)
+    assert.match(formatted, /⚠️ \*Ação \/ Decisão:\*/)
+    // Garante que links de calendário NÃO estão presentes para esse tipo de aviso
+    assert.equal(formatted.includes('calendar.google.com'), false)
+    assert.equal(formatted.includes('Adicionar ao'), false)
+  })
 })
+

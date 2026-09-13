@@ -17,7 +17,7 @@ export type TargetScope = z.infer<typeof TargetScopeSchema>
  * Esquema de um evento escolar extraído por IA
  */
 export const ExtractedEventSchema = z.object({
-  type: z.string().describe('Tipo do evento (ex: material, prova, licao_de_casa, reuniao, acao_familia, atividade)'),
+  type: z.string().describe('Tipo do evento (ex: material, prova, licao_de_casa, reuniao, acao_familia, atividade, comunicado_alerta, pesquisa, aniversario, evento)'),
   title: z.string().describe('Título curto e claro do evento'),
   description: z.string().nullable().optional().describe('Descrição detalhada ou instruções relevantes'),
   subject: z.string().nullable().optional().describe('Matéria/Disciplina (ex: Língua Portuguesa, Matemática)'),

@@ -5,14 +5,16 @@ export function buildSystemPrompt(): string {
 
 ### OBJETIVO
 Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado, texto extraído de arquivo PDF ou imagem/foto de convite ou comunicado) e identificar todos os compromissos escolares e familiares relevantes para a família:
-- **saber** (avisos de reuniões, mudanças de datas, comunicados informativos importantes, convites de aniversário de colegas e eventos)
-- **fazer** (assinar provas, preencher pesquisas/formulários, comprar materiais, entregar trabalhos, confirmar presença em festas)
-- **acompanhar** (prazos de entrega, roteiros de estudos, conteúdos de provas)
+- **saber** (avisos de reuniões, mudanças de datas, comunicados informativos importantes, convites de aniversário de colegas, eventos escolares e alertas de contingência operacional/segurança/Defesa Civil)
+- **fazer** (assinar provas, preencher pesquisas/formulários, comprar materiais, entregar trabalhos, confirmar presença em festas, avaliar comparecimento em dias de alerta)
+- **acompanhar** (prazos de entrega, roteiros de estudos, conteúdos de provas, comunicados operacionais da escola)
 - **lembrar** (datas de avaliações, provas, simulados, festas de aniversário, eventos escolares)
 
 ### PRINCÍPIO DE RELEVÂNCIA (CRÍTICO)
 - **relevant = false**: Mensagens que são meros relatos pedagógicos de atividades já realizadas no passado em sala de aula (ex: "Hoje as crianças participaram de um Amigo Secreto..."), felicitações genéricas, mensagens de boas-vindas sem nenhuma ação futura. NENHUM evento deve ser gerado nestes casos.
-- **relevant = true**: Qualquer mensagem ou documento que traga ações futuras, entregas de materiais, assinaturas de provas, formulários, prazos, provas, trabalhos, roteiros de estudos, comunicados de acompanhamento ou convites de aniversários/eventos com data e local.
+- **relevant = true**: Qualquer mensagem ou documento que traga:
+  * Ações futuras, entregas de materiais, assinaturas de provas, formulários, prazos, provas, trabalhos, roteiros de estudos ou convites de aniversários/eventos com data e local.
+  * **COMUNICADOS OPERACIONAIS E ALERTAS DE CONTINGÊNCIA (CRÍTICO)**: Avisos sobre condições climáticas severas (alertas da Defesa Civil), greves de transporte público, interrupções de fornecimento (água, energia), avisos de segurança ou orientações da direção sobre suspensão ou flexibilização de aulas (presença facultativa). Esses avisos são de altíssima relevância e NUNCA devem ser descartados.
 
 ### REGRAS RÍGIDAS DE EXTRAÇÃO E PROCESSAMENTO
 1. **DIVERSIDADE DE FORMATOS (TEXTO, TABELAS, PDFS E FOTOS/CONVITES)**:
@@ -23,6 +25,17 @@ Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado, texto 
      * O tipo deve ser "aniversario", "festa" ou "evento".
      * Extraia a data e o horário exatos (ex: 29 de setembro às 15:30 -> preencha start_date e due_date no formato ISO com a hora: "YYYY-09-29T15:30:00").
      * No campo \`description\`, inclua todos os detalhes relevantes: local, condomínio, endereço completo, salão de festas e tema se houver.
+   - **COMUNICADOS OPERACIONAIS, SEGURANÇA E ALERTAS DE CONTINGÊNCIA (comunicado_alerta)**:
+     * Quando a mensagem tratar de alerta climático (Defesa Civil, chuvas intensas, ventos), greve de transportes, problemas estruturais ou decisões sobre funcionamento e comparecimento escolar:
+       - O tipo deve ser "comunicado_alerta".
+       - O título deve resumir o alerta e o status das aulas (ex: "Alerta Defesa Civil — Aulas Mantidas com Presença Facultativa").
+       - Extraia a data das aulas ou do período afetado (preencha start_date e due_date).
+       - No campo \`description\`, resuma os pontos-chave de forma transparente:
+         1. Funcionamento: aulas mantidas normalmente ou suspensas;
+         2. Critério da família: presença facultativa a critério dos pais diante dos riscos de deslocamento;
+         3. Pedagógico: ausência de conteúdo novo / dedicação a revisão, sem prejuízo curricular para quem ficar em casa;
+         4. Acompanhamento: monitoramento contínuo das orientações oficiais.
+       - Defina \`action_required = true\` sempre que a família precisar tomar uma decisão sobre o comparecimento ou seguir orientações de segurança.
    - **Busca de Detalhes e Observações Importantes (CRÍTICO)**: Avisos contendo "Observação importante", "Atenção", "OBS:" ou orientações especiais para os pais (ex: conferir assinaturas de provas, entregar materiais específicos, vestuário, autorizações, confirmação de presença) são de altíssima relevância. NUNCA omita essas observações; incorpore-as de forma clara e completa no campo \`description\` do evento correspondente.
 
 2. **NÃO INVENTE DATAS OU HORÁRIOS**: Se o documento não mencionar uma data ou prazo explícito (ex: DD/MM ou DD/MM/AAAA) ou relativo (ex: "amanhã", "próxima sexta"), deixe \`start_date\` ou \`due_date\` como \`null\`.
@@ -33,7 +46,7 @@ Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado, texto 
    - **HORÁRIOS ESPECÍFICOS (CRÍTICO)**: Se a mensagem mencionar um horário específico para o compromisso ou reunião (ex: "15h", "às 14:30", "19:00"), preencha \`start_date\` e \`due_date\` incluindo a hora no formato ISO 8601 (ex: \`YYYY-MM-DDTHH:mm:ss\`, como \`2026-09-08T15:00:00\`). Se não houver horário especificado na mensagem (apenas o dia), preencha no formato \`YYYY-MM-DD\`.
 4. **MÚLTIPLOS EVENTOS**: Uma única mensagem ou PDF pode gerar múltiplos eventos se contiver várias avaliações, tarefas ou prazos distintos.
 5. **AÇÃO DA FAMÍLIA (action_required)**:
-   - \`true\`: se os responsáveis ou a criança precisam agir ativamente (ex: assinar prova, preencher formulário, enviar material, entregar trabalho).
+   - \`true\`: se os responsáveis ou a criança precisam agir ativamente (ex: assinar prova, preencher formulário, enviar material, entregar trabalho, decidir comparecimento).
    - \`false\`: se for apenas uma data informativa ou data de avaliação em sala de aula.
 6. **PRESERVAÇÃO DE URLS**: Se houver links (http/https ou formulários como Google Forms/Typeform), inclua a URL exata no campo \`url\`.
 7. **PÚBLICO-ALVO (target_scope)**:
@@ -49,7 +62,7 @@ Sua resposta deve ser estritamente um objeto JSON válido no seguinte formato:
   "relevant": boolean,
   "events": [
     {
-      "type": "material" | "prova" | "licao_de_casa" | "reuniao" | "acao_familia" | "atividade" | "pesquisa" | "aniversario" | "evento",
+      "type": "material" | "prova" | "licao_de_casa" | "reuniao" | "acao_familia" | "atividade" | "pesquisa" | "aniversario" | "evento" | "comunicado_alerta",
       "title": "string",
       "description": "string | null",
       "subject": "string | null",

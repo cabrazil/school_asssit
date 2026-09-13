@@ -363,6 +363,29 @@ export class MockAIAdapter implements IAIProvider {
       }
     }
 
+    // Comunicado Operacional / Alerta da Defesa Civil / Clima Severo (Anglo Leonardo da Vinci)
+    if (text.includes('defesa civil') || text.includes('condições climáticas') || text.includes('condicoes climaticas')) {
+      return {
+        relevant: true,
+        events: [
+          {
+            type: 'comunicado_alerta',
+            title: 'Alerta Meteorológico (Defesa Civil) — Aulas Mantidas com Presença Facultativa',
+            description: 'Aulas mantidas normalmente com estrutura de segurança. Diante dos riscos de deslocamento (chuvas intensas e ventos), a decisão de comparecimento fica a critério de cada família. Aulas dedicadas à revisão, sem novo conteúdo e sem prejuízo curricular.',
+            subject: null,
+            start_date: '2026-09-11',
+            due_date: '2026-09-11',
+            action_required: true,
+            target_scope: 'school',
+            target_grade: null,
+            child_name: null,
+            url: null,
+            confidence: 0.98,
+          },
+        ],
+      }
+    }
+
     // Default fallback
     return {
       relevant: false,

@@ -14,6 +14,7 @@
     "prisma:studio": "prisma studio",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/**/*.spec.ts",
+    "test:real": "tsx src/scripts/test-real-message.ts",
     "lint": "eslint src --ext .ts"
   },
   "prisma": {
