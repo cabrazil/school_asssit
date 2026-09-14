@@ -183,7 +183,8 @@ export class MessageService {
             const icsContent = buildIcsCalendar(
               calendarEvents.map((e) => ({
                 title: e.title,
-                dateStr: e.due_date ?? e.start_date,
+                dateStr: e.start_date ?? e.due_date,
+                endDateStr: e.start_date && e.due_date && e.start_date !== e.due_date ? e.due_date : null,
                 description: e.description,
               })),
             )
@@ -258,8 +259,8 @@ export function formatWhatsAppEventResponse(
       const desc = ev.description ? ev.description.trim() : ''
 
       const dateRange = ev.start_date && ev.due_date && ev.start_date !== ev.due_date
-        ? `${formatDate(ev.start_date)} até ${formatDate(ev.due_date)}`
-        : ev.due_date ? formatDate(ev.due_date) : ev.start_date ? formatDate(ev.start_date) : 'Sem data fixa'
+        ? formatTimeOrDateRange(ev.start_date, ev.due_date)
+        : ev.start_date ? formatDate(ev.start_date) : ev.due_date ? formatDate(ev.due_date) : 'Sem data fixa'
 
       // Formatação especial para comunicados operacionais / alertas
       if (ev.type === 'comunicado_alerta') {
@@ -283,12 +284,17 @@ export function formatWhatsAppEventResponse(
         return block
       }
 
-      // Formatação padrão para compromissos e tarefas de agenda
+      const isFixedEvent = ev.type === 'aniversario' || ev.type === 'festa' || ev.type === 'evento' || ev.type === 'reuniao'
       const isImportantNote = /\b(importante|obs|aten[çc][ãa]o|alerta|cuidado|urgente)\b/i.test(desc)
 
       let detailTag = ''
       if (desc) {
-        if (isImportantNote) {
+        if (isFixedEvent) {
+          detailTag = `\n📍 *Detalhes / Local:*\n${desc}`
+          if (ev.action_required) {
+            detailTag += `\n⚠️ *Ação:* Confirmar presença conforme orientações acima`
+          }
+        } else if (isImportantNote) {
           detailTag = `\n🚨 *Observação Importante:* ${desc}`
         } else if (ev.action_required) {
           detailTag = `\n⚠️ *Sua Ação:* ${desc}`
@@ -299,8 +305,10 @@ export function formatWhatsAppEventResponse(
         detailTag = `\n⚠️ *Sua Ação:* Acompanhar/realizar tarefa com a escola`
       }
 
+      const dateLabel = isFixedEvent ? 'Data / Horário' : (ev.action_required ? 'Prazo' : 'Data')
+
       let block = `📌 *${number}${ev.title.toUpperCase()}*${subjectTag}`
-      block += `\n🗓️ *Prazo:* ${dateRange}`
+      block += `\n🗓️ *${dateLabel}:* ${dateRange}`
       if (detailTag) block += detailTag
       if (ev.target_scope || ev.target_grade) {
         const targetStr = ev.target_grade ?? translateScope(ev.target_scope)
@@ -310,11 +318,15 @@ export function formatWhatsAppEventResponse(
         block += `\n🔗 *Link:* ${ev.url}`
       }
 
+      const calendarStart = ev.start_date ?? ev.due_date
+      const calendarEnd = ev.start_date && ev.due_date && ev.start_date !== ev.due_date ? ev.due_date : null
+
       const calendarLink = buildCalendarUrl(
         calendarProvider,
         ev.title,
-        ev.due_date ?? ev.start_date,
+        calendarStart,
         ev.description,
+        calendarEnd,
       )
       if (calendarLink) {
         block += `\n📅 *${calendarLink.providerLabel}:* ${calendarLink.url}`
@@ -332,6 +344,26 @@ export function formatWhatsAppEventResponse(
   }
 
   return header + '\n' + eventsFormatted + footer
+}
+
+function formatTimeOrDateRange(startStr: string, endStr: string): string {
+  const startHasTime = startStr.includes('T')
+  const endHasTime = endStr.includes('T')
+
+  if (startHasTime && endHasTime) {
+    const [startDatePart, startTimePart] = startStr.split('T')
+    const [endDatePart, endTimePart] = endStr.split('T')
+
+    if (startDatePart === endDatePart) {
+      const parts = startDatePart.split('-')
+      const formattedDay = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : startDatePart
+      const startClean = startTimePart.slice(0, 5)
+      const endClean = endTimePart.slice(0, 5)
+      return `${formattedDay} das ${startClean} às ${endClean}`
+    }
+  }
+
+  return `${formatDate(startStr)} até ${formatDate(endStr)}`
 }
 
 function formatDate(dateStr: string): string {

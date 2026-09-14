@@ -1,6 +1,7 @@
 export interface IcsEventInput {
   title: string
   dateStr?: string | null
+  endDateStr?: string | null
   description?: string | null
   location?: string | null
 }
@@ -72,16 +73,35 @@ export function buildIcsCalendar(
     let dtEndLine = ''
 
     if (hasTime) {
+      let endDatePart = datePart
       let endHour = startHour + 1
       let endMinute = startMinute
-      if (endHour >= 24) {
-        endHour = 23
-        endMinute = 59
+
+      if (ev.endDateStr) {
+        const endTrimmed = ev.endDateStr.trim().replace(' ', 'T')
+        if (endTrimmed.includes('T')) {
+          const [ed, et] = endTrimmed.split('T')
+          endDatePart = ed
+          const timeMatches = et.match(/^(\d{1,2}):(\d{2})/)
+          if (timeMatches) {
+            endHour = parseInt(timeMatches[1], 10)
+            endMinute = parseInt(timeMatches[2], 10)
+          }
+        } else {
+          endDatePart = endTrimmed
+        }
+      } else {
+        if (endHour >= 24) {
+          endHour = 23
+          endMinute = 59
+        }
       }
+
+      const cleanEndDate = endDatePart.replace(/-/g, '')
       const startTimeCompact = `${pad(startHour)}${pad(startMinute)}00`
       const endTimeCompact = `${pad(endHour)}${pad(endMinute)}00`
       dtStartLine = `DTSTART:${cleanDate}T${startTimeCompact}`
-      dtEndLine = `DTEND:${cleanDate}T${endTimeCompact}`
+      dtEndLine = `DTEND:${cleanEndDate}T${endTimeCompact}`
     } else {
       // Evento de dia inteiro (all-day): DTEND deve ser o dia seguinte de acordo com RFC 5545
       dtStartLine = `DTSTART;VALUE=DATE:${cleanDate}`

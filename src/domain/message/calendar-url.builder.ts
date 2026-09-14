@@ -13,6 +13,8 @@ export function buildCalendarUrl(
   title: string,
   dateStr?: string | null,
   details?: string | null,
+  endDateStr?: string | null,
+  location?: string | null,
 ): CalendarLinkInfo | null {
   if (!dateStr || provider === 'NONE') return null
 
@@ -35,13 +37,31 @@ export function buildCalendarUrl(
     const cleanDigits = datePart.replace(/-/g, '')
     if (cleanDigits.length < 8) return null
 
+    let endDatePart = datePart
     let endHour = startHour + 1
     let endMinute = startMinute
-    if (endHour >= 24) {
-      endHour = 23
-      endMinute = 59
+
+    if (endDateStr) {
+      const endTrimmed = endDateStr.trim().replace(' ', 'T')
+      if (endTrimmed.includes('T')) {
+        const [ed, et] = endTrimmed.split('T')
+        endDatePart = ed
+        const timeMatches = et.match(/^(\d{1,2}):(\d{2})/)
+        if (timeMatches) {
+          endHour = parseInt(timeMatches[1], 10)
+          endMinute = parseInt(timeMatches[2], 10)
+        }
+      } else {
+        endDatePart = endTrimmed
+      }
+    } else {
+      if (endHour >= 24) {
+        endHour = 23
+        endMinute = 59
+      }
     }
 
+    const cleanEndDigits = endDatePart.replace(/-/g, '')
     const pad = (n: number) => String(n).padStart(2, '0')
     const startTimeIso = `${pad(startHour)}:${pad(startMinute)}:00`
     const endTimeIso = `${pad(endHour)}:${pad(endMinute)}:00`
@@ -54,7 +74,7 @@ export function buildCalendarUrl(
     switch (provider) {
       case 'OUTLOOK_WORK': {
         const startIso = `${datePart}T${startTimeIso}`
-        const endIso = `${datePart}T${endTimeIso}`
+        const endIso = `${endDatePart}T${endTimeIso}`
         const params = new URLSearchParams({
           path: '/calendar/action/compose',
           rru: 'addevent',
@@ -63,6 +83,9 @@ export function buildCalendarUrl(
           enddt: endIso,
           body: bodyContent,
         })
+        if (location) {
+          params.set('location', location)
+        }
         return {
           providerLabel: 'MS Outlook Work',
           url: `https://outlook.office.com/calendar/deeplink/compose?${params.toString()}`,
@@ -71,13 +94,16 @@ export function buildCalendarUrl(
 
       case 'GOOGLE_PERSONAL': {
         const startIso = `${cleanDigits}T${startTimeCompact}`
-        const endIso = `${cleanDigits}T${endTimeCompact}`
+        const endIso = `${cleanEndDigits}T${endTimeCompact}`
         const params = new URLSearchParams({
           action: 'TEMPLATE',
           text: titleWithEmoji,
           dates: `${startIso}/${endIso}`,
           details: bodyContent,
         })
+        if (location) {
+          params.set('location', location)
+        }
         return {
           providerLabel: 'Google Agenda',
           url: `https://calendar.google.com/calendar/render?${params.toString()}`,
@@ -94,7 +120,7 @@ export function buildCalendarUrl(
       case 'OUTLOOK_PERSONAL':
       default: {
         const startIso = `${datePart}T${startTimeIso}`
-        const endIso = `${datePart}T${endTimeIso}`
+        const endIso = `${endDatePart}T${endTimeIso}`
         const params = new URLSearchParams({
           rru: 'addevent',
           subject: titleWithEmoji,
@@ -102,6 +128,9 @@ export function buildCalendarUrl(
           enddt: endIso,
           body: bodyContent,
         })
+        if (location) {
+          params.set('location', location)
+        }
         return {
           providerLabel: 'MS Outlook Pessoal',
           url: `https://outlook.live.com/calendar/0/action/compose?${params.toString()}`,

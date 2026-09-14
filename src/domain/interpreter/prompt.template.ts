@@ -20,11 +20,20 @@ Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado, texto 
 1. **DIVERSIDADE DE FORMATOS (TEXTO, TABELAS, PDFS E FOTOS/CONVITES)**:
    - Os documentos podem vir em formato de texto simples, listas, tabelas, grades extraídas de PDFs ou fotos/imagens de convites e circulares.
    - **ISOLAMENTO TOTAL DE COLUNAS EM TABELAS**: Quando o documento estiver dividido em colunas (ex: marcadas como "--- [COLUNA DA TABELA N] ---" ou organizadas por matérias), CADA COLUNA É UMA DISCIPLINA/AVALIAÇÃO TOTALMENTE INDEPENDENTE COM SUA PRÓPRIA DATA E CONTEÚDO. NUNCA agrupe duas colunas consecutivas de datas diferentes em um único evento com intervalo de datas (ex: NUNCA crie "Avaliação de Inglês - Produção de Texto" de 31/08 a 01/09). Crie 1 evento separado para a Coluna 1 (ex: AVALIAÇÃO DE INGLÊS em 31/08/2026), 1 evento separado para a Coluna 2 (ex: PRODUÇÃO DE TEXTO em 01/09/2026), 1 evento separado para a Coluna 3 (ex: AVALIAÇÃO MULTIDISCIPLINAR em 02/09/2026) e 1 evento separado para a Coluna 4 (ex: AVALIAÇÃO DE MATEMÁTICA em 03/09/2026).
-   - **FOTOS E CONVITES DE ANIVERSÁRIO / EVENTOS**: Quando a mensagem ou foto for um convite de aniversário ou evento (ex: "Aniversário da Maria Clara"):
-     * O título deve ser claro (ex: "Aniversário da Maria Clara").
+   - **FOTOS E CONVITES DE ANIVERSÁRIO / EVENTOS**: Quando a mensagem ou foto for um convite de aniversário ou evento (ex: "Aniversário da Maria Clara", "Pedro 9 Anos"):
+     * O título deve ser claro (ex: "Aniversário do Pedro (9 Anos)").
      * O tipo deve ser "aniversario", "festa" ou "evento".
-     * Extraia a data e o horário exatos (ex: 29 de setembro às 15:30 -> preencha start_date e due_date no formato ISO com a hora: "YYYY-09-29T15:30:00").
-     * No campo \`description\`, inclua todos os detalhes relevantes: local, condomínio, endereço completo, salão de festas e tema se houver.
+     * **INTERVALO DE HORÁRIOS (CRÍTICO)**: Se o convite mencionar horário com início e término (ex: "das 16h às 20h", "das 14:00 às 18:00"):
+       - \`start_date\`: preencha com a data e HORA DE INÍCIO (ex: "2026-10-17T16:00:00").
+       - \`due_date\`: preencha com a data e HORA DE TÉRMINO (ex: "2026-10-17T20:00:00").
+       - NUNCA use a hora final como start_date e NUNCA ignore a hora inicial!
+     * Se houver apenas um horário pontual de início (ex: "às 15:30"):
+       - Preencha \`start_date\` e \`due_date\` com a mesma data e hora ISO (ex: "2026-09-29T15:30:00").
+     * No campo \`description\`, inclua todos os detalhes relevantes de forma organizada:
+       - Local e endereço completo (ex: Arena Soccer Grass Alphaville - Av. Piraíba, nº 434 - Centro Comercial Jubran, Barueri - SP)
+       - Confirmação de presença (RSVP), data limite e telefone (ex: Confirme sua presença até 05/10 Tel: (11) 98897-1110)
+       - Tema ou orientações extras se houver (ex: Corinthians / Futebol)
+     * Se o convite solicitar confirmação de presença (RSVP) com prazo ou telefone, defina \`action_required = true\`.
    - **COMUNICADOS OPERACIONAIS, SEGURANÇA E ALERTAS DE CONTINGÊNCIA (comunicado_alerta)**:
      * Quando a mensagem tratar de alerta climático (Defesa Civil, chuvas intensas, ventos), greve de transportes, problemas estruturais ou decisões sobre funcionamento e comparecimento escolar:
        - O tipo deve ser "comunicado_alerta".
@@ -46,7 +55,13 @@ Analisar o conteúdo recebido (seja mensagem de texto, aviso, comunicado, texto 
    - "amanhã": adicione 1 dia à data da mensagem.
    - "hoje": use a data da mensagem.
    - "próxima semana": se houver um dia mencionado (ex: "próxima quarta"), calcule a data exata com base na data de recebimento.
-   - **HORÁRIOS ESPECÍFICOS (CRÍTICO)**: Se a mensagem mencionar um horário específico para o compromisso ou reunião (ex: "15h", "às 14:30", "19:00"), preencha \`start_date\` e \`due_date\` incluindo a hora no formato ISO 8601 (ex: \`YYYY-MM-DDTHH:mm:ss\`, como \`2026-09-08T15:00:00\`). Se não houver horário especificado na mensagem (apenas o dia), preencha no formato \`YYYY-MM-DD\`.
+   - **HORÁRIOS ESPECÍFICOS E INTERVALOS (CRÍTICO)**:
+     * Se a mensagem ou convite tiver horário com início e fim (ex: "das 16h às 20h", "14h às 18h", "19:00 às 21:30"):
+       - \`start_date\`: preencha com a HORA DE INÍCIO no formato ISO 8601 (ex: "YYYY-MM-DDTHH:mm:ss", como "2026-10-17T16:00:00").
+       - \`due_date\`: preencha com a HORA DE ENCERRAMENTO no formato ISO 8601 (ex: "YYYY-MM-DDTHH:mm:ss", como "2026-10-17T20:00:00").
+     * Se houver apenas um horário pontual (ex: "às 15h", "às 14:30"):
+       - Preencha tanto \`start_date\` quanto \`due_date\` com o mesmo horário ISO ("YYYY-MM-DDTHH:mm:ss").
+     * Se não houver horário especificado na mensagem (apenas o dia), preencha no formato \`YYYY-MM-DD\`.
 4. **MÚLTIPLOS EVENTOS**: Uma única mensagem ou PDF pode gerar múltiplos eventos se contiver várias avaliações, tarefas ou prazos distintos.
 5. **AÇÃO DA FAMÍLIA (action_required)**:
    - \`true\`: se os responsáveis ou a criança precisam agir ativamente (ex: assinar prova, preencher formulário, enviar material, entregar trabalho, decidir comparecimento).

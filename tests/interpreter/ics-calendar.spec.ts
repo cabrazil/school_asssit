@@ -53,3 +53,20 @@ test('Gera múltiplos eventos em um único arquivo .ics', () => {
   const matches = ics.match(/BEGIN:VEVENT/g)
   assert.equal(matches?.length, 2)
 })
+
+test('Gera arquivo .ics com intervalo de horário completo (ex: das 16h às 20h)', () => {
+  const ics = buildIcsCalendar([
+    {
+      title: 'Aniversário do Pedro (9 Anos)',
+      dateStr: '2026-10-17T16:00:00',
+      endDateStr: '2026-10-17T20:00:00',
+      description: 'Arena Soccer Grass Alphaville',
+      location: 'Avenida Piraíba, nº 434',
+    },
+  ])
+
+  assert.ok(ics.includes('DTSTART:20261017T160000'))
+  assert.ok(ics.includes('DTEND:20261017T200000'))
+  assert.ok(ics.includes('LOCATION:Avenida Piraíba\\, nº 434'))
+})
+

@@ -281,5 +281,39 @@ Colégio Anglo Leonardo da Vinci`
     assert.equal(formatted.includes('calendar.google.com'), false)
     assert.equal(formatted.includes('Adicionar ao'), false)
   })
+
+  it('14. Convite de Aniversário com intervalo de horários (Pedro 9 Anos, 16h às 20h) — Deve formatar horário das 16:00 às 20:00 e gerar agenda correta', async () => {
+    const messageContent = `[IMAGEM/FOTO RECEBIDA]
+VOCÊ ESTÁ CONVIDADO!
+PEDRO 9 ANOS
+Data: 17/10/2026
+Horário: das 16h às 20h
+Local: Arena Soccer Grass Alphaville
+Endereço: Avenida Piraíba, nº 434 – Centro Comercial Jubran, Barueri – SP
+Confirme sua presença até 05/10 Tel: (11) 98897-1110
+BORA JOGAR? TE ESPERAMOS!`
+
+    const { result } = await interpreter.interpret({
+      ...defaultInput,
+      content: messageContent,
+    })
+
+    assert.equal(result.relevant, true)
+    assert.equal(result.events.length, 1)
+
+    const ev = result.events[0]
+    assert.equal(ev.type, 'aniversario')
+    assert.equal(ev.start_date, '2026-10-17T16:00:00')
+    assert.equal(ev.due_date, '2026-10-17T20:00:00')
+
+    const formatted = formatWhatsAppEventResponse(result, 'Vanessa', 'GOOGLE_PERSONAL')
+
+    // Deve formatar "das 16:00 às 20:00" em vez de "às 20:00"
+    assert.match(formatted, /17\/10\/2026 das 16:00 às 20:00/)
+    assert.match(formatted, /🗓️ \*Data \/ Horário:\*/)
+
+    // Link do Google Agenda deve começar às 16h e terminar às 20h (não às 20h às 21h)
+    assert.ok(formatted.includes('20261017T160000%2F20261017T200000'))
+  })
 })
 

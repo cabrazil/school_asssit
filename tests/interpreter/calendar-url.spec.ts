@@ -62,3 +62,31 @@ test('Gera label e instrução de anexo para APPLE_CALENDAR', () => {
   assert.equal(result.providerLabel, 'Apple Calendar')
   assert.ok(result.url.includes('.ics'))
 })
+
+test('Gera URL para Google Agenda com intervalo completo de horário (ex: das 16h às 20h) e localização', () => {
+  const result = buildCalendarUrl(
+    'GOOGLE_PERSONAL',
+    'Aniversário do Pedro (9 Anos)',
+    '2026-10-17T16:00:00',
+    'Trazer chuteira',
+    '2026-10-17T20:00:00',
+    'Arena Soccer Grass Alphaville',
+  )
+  assert.ok(result)
+  assert.equal(result.providerLabel, 'Google Agenda')
+  assert.ok(result.url.includes('20261017T160000%2F20261017T200000'))
+  assert.ok(result.url.includes('location=Arena+Soccer+Grass+Alphaville'))
+})
+
+test('Gera URL para MS Outlook com intervalo completo de horário (ex: das 16h às 20h)', () => {
+  const result = buildCalendarUrl(
+    'OUTLOOK_PERSONAL',
+    'Aniversário do Pedro (9 Anos)',
+    '2026-10-17T16:00:00',
+    'Festa de aniversário',
+    '2026-10-17T20:00:00',
+  )
+  assert.ok(result)
+  assert.ok(result.url.includes('startdt=2026-10-17T16%3A00%3A00'))
+  assert.ok(result.url.includes('enddt=2026-10-17T20%3A00%3A00'))
+})

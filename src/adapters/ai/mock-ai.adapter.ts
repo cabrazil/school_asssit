@@ -386,6 +386,29 @@ export class MockAIAdapter implements IAIProvider {
       }
     }
 
+    // Convite de Aniversário com intervalo de horários (Pedro 9 Anos, 16h às 20h)
+    if (text.includes('pedro 9 anos') || text.includes('arena soccer grass') || text.includes('das 16h às 20h')) {
+      return {
+        relevant: true,
+        events: [
+          {
+            type: 'aniversario',
+            title: 'Aniversário do Pedro (9 Anos)',
+            description: 'Local: Arena Soccer Grass Alphaville - Avenida Piraíba, nº 434, Centro Comercial Jubran, Barueri - SP\nConfirme sua presença até 05/10: (11) 98897-1110',
+            subject: null,
+            start_date: '2026-10-17T16:00:00',
+            due_date: '2026-10-17T20:00:00',
+            action_required: true,
+            target_scope: 'child',
+            target_grade: null,
+            child_name: null,
+            url: null,
+            confidence: 0.98,
+          },
+        ],
+      }
+    }
+
     // Default fallback
     return {
       relevant: false,
